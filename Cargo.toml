@@ -1,0 +1,30 @@
+[package]
+name = "goomba"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = [
+    "code",
+]
+
+[dependencies]
+anyhow = "1"
+argh = "0.1"
+env_logger = "0.10"
+futures-task = "0.3"
+log = "0.4"
+pixels = "0.11"
+rmp-serde = "1"
+serde = { version = "1", features = ["derive"] }
+structview = "1"
+winit = "0.28"
+winit_input_helper = "0.14"
+code = { path = "code" }
+
+[profile.release]
+panic = "abort"
+
+[profile.dev]
+opt-level = 1
+panic = "abort"
