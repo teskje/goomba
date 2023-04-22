@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use structview::View;
 
 const KB: usize = 1024;
@@ -34,14 +34,18 @@ impl Header {
     }
 
     pub fn cartridge_type(&self) -> Type {
-        use Type::*;
+        use MapperType::*;
 
-        match self.cartridge_type {
-            0x00 => RomOnly,
-            0x01 | 0x02 | 0x03 => Mbc1,
-            0x11 | 0x12 | 0x13 => Mbc3,
-            code => Unsupported(code),
-        }
+        let (mapper, battery) = match self.cartridge_type {
+            0x00 => (None, false),
+            0x01 | 0x02 => (Mbc1, false),
+            0x03 => (Mbc1, true),
+            0x11 | 0x12 => (Mbc3, false),
+            0x13 => (Mbc3, true),
+            code => (Unsupported(code), false),
+        };
+
+        Type { mapper, battery }
     }
 
     pub fn rom_size(&self) -> Result<usize> {
@@ -66,15 +70,20 @@ impl Header {
 }
 
 fn compute_header_checksum(data: &[u8]) -> u8 {
-        let mut checksum: u8 = 0;
-        for byte in &data[0x34..=0x4c] {
-            checksum = checksum.wrapping_sub(*byte).wrapping_sub(1);
-        }
-        checksum
+    let mut checksum: u8 = 0;
+    for byte in &data[0x34..=0x4c] {
+        checksum = checksum.wrapping_sub(*byte).wrapping_sub(1);
+    }
+    checksum
 }
 
-pub enum Type {
-    RomOnly,
+pub struct Type {
+    pub mapper: MapperType,
+    pub battery: bool,
+}
+
+pub enum MapperType {
+    None,
     Mbc1,
     Mbc3,
     Unsupported(u8),

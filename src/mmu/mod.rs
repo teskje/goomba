@@ -4,14 +4,14 @@ use anyhow::{bail, Context, Result};
 use log::{trace, warn};
 
 use crate::bits::BitsExt;
-use crate::cartridge;
+use crate::cartridge::{self, MapperType};
 use crate::state::State;
 
-use self::bank::Bank;
 use self::mapper::Mapper;
+use self::memory::Memory;
 
-mod bank;
 mod mapper;
+mod memory;
 
 const KB: usize = 1024;
 
@@ -25,7 +25,7 @@ pub fn load_cartridge(rom: Vec<u8>) -> Result<MmuState> {
 
     let rom_size = header.rom_size()?;
     let ram_size = header.ram_size()?;
-    if rom_size != rom.len() {
+    if usize::from(rom_size) != rom.len() {
         bail!(
             "ROM size mismatch (expected {:#x}, got {:#x})",
             rom_size,
@@ -33,21 +33,18 @@ pub fn load_cartridge(rom: Vec<u8>) -> Result<MmuState> {
         );
     }
 
-    let mapper = match header.cartridge_type() {
-        cartridge::Type::RomOnly => mapper::load_rom_only(rom)?,
-        cartridge::Type::Mbc1 => mapper::load_mbc1(rom, ram_size)?,
-        cartridge::Type::Mbc3 => todo!("MBC3"),
-        cartridge::Type::Unsupported(code) => bail!("unsupported cartridge type: {code:#x}"),
+    let typ = header.cartridge_type();
+    let rom = Memory::from(rom);
+    let ram = Memory::with_size(ram_size);
+
+    let mapper = match typ.mapper {
+        MapperType::None => mapper::load_rom_only(rom)?,
+        MapperType::Mbc1 => mapper::load_mbc1(rom, ram)?,
+        MapperType::Mbc3 => todo!("MBC3"),
+        MapperType::Unsupported(code) => bail!("unsupported cartridge type: {code:#x}"),
     };
 
-    Ok(MmuState {
-        mapper,
-        work_ram: Default::default(),
-        high_ram: Default::default(),
-        video_ram: Default::default(),
-        oam: Default::default(),
-        serial_out: None,
-    })
+    Ok(MmuState::new(mapper))
 }
 
 pub struct Mmu<'a> {
@@ -154,14 +151,25 @@ impl<'a> Mmu<'a> {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct MmuState {
     mapper: Mapper,
-    work_ram: Bank<WORK_RAM_SIZE>,
-    high_ram: Bank<HIGH_RAM_SIZE>,
-    video_ram: Bank<VIDEO_RAM_SIZE>,
-    oam: Bank<OAM_SIZE>,
+    work_ram: Memory,
+    high_ram: Memory,
+    video_ram: Memory,
+    oam: Memory,
     serial_out: Option<u8>,
 }
 
 impl MmuState {
+    fn new(mapper: Mapper) -> Self {
+        Self {
+            mapper,
+            work_ram: Memory::with_size(WORK_RAM_SIZE),
+            high_ram: Memory::with_size(HIGH_RAM_SIZE),
+            video_ram: Memory::with_size(VIDEO_RAM_SIZE),
+            oam: Memory::with_size(OAM_SIZE),
+            serial_out: None,
+        }
+    }
+
     pub fn enable_serial_printing(&mut self) {
         self.serial_out = Some(0);
     }

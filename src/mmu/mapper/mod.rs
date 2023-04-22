@@ -2,6 +2,8 @@ use anyhow::{Context, Result};
 
 use log::warn;
 
+use super::memory::Memory;
+
 mod mbc1;
 mod rom_only;
 
@@ -45,14 +47,14 @@ impl Mapper {
     }
 }
 
-pub(super) fn load_rom_only(rom: Vec<u8>) -> Result<Mapper> {
+pub(super) fn load_rom_only(rom: Memory) -> Result<Mapper> {
     rom_only::load(rom)
         .map(Mapper::RomOnly)
         .context("loading rom_only mapper")
 }
 
-pub(super) fn load_mbc1(rom: Vec<u8>, ram_size: usize) -> Result<Mapper> {
-    mbc1::load(rom, ram_size)
+pub(super) fn load_mbc1(rom: Memory, ram: Memory) -> Result<Mapper> {
+    mbc1::load(rom, ram)
         .map(Mapper::Mbc1)
         .context("loading mbc1 mapper")
 }

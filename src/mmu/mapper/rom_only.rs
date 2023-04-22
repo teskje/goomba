@@ -2,15 +2,15 @@ use anyhow::{bail, Result};
 
 use log::warn;
 
-use crate::mmu::bank::Bank;
 use crate::mmu::KB;
+use crate::mmu::memory::Memory;
 
 const ROM_SIZE: usize = 32 * KB;
 
 #[derive(Debug)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub(in crate::mmu) struct Mapper {
-    rom: Bank<ROM_SIZE>,
+    rom: Memory,
 }
 
 impl Mapper {
@@ -22,9 +22,9 @@ impl Mapper {
     }
 }
 
-pub(super) fn load(rom: Vec<u8>) -> Result<Mapper> {
-    match rom.try_into() {
-        Ok(rom) => Ok(Mapper { rom }),
-        Err(v) => bail!("invalid ROM size: {:#x}", v.len()),
-    }
+pub(super) fn load(rom: Memory) -> Result<Mapper> {
+    if rom.len() != ROM_SIZE {
+        bail!("invalid ROM size: {:#x}", rom.len());
+    } 
+    Ok(Mapper { rom })
 }
