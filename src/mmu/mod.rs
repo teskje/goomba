@@ -20,11 +20,18 @@ const HIGH_RAM_SIZE: usize = 127;
 const VIDEO_RAM_SIZE: usize = 8 * KB;
 const OAM_SIZE: usize = 160;
 
-pub fn load_cartridge(rom: Vec<u8>) -> Result<MmuState> {
+pub fn load_cartridge(rom: Vec<u8>, ram: Option<Vec<u8>>) -> Result<MmuState> {
     let header = cartridge::Header::parse(&rom[0x100..]).context("reading cartridge header")?;
-
     let rom_size = header.rom_size()?;
     let ram_size = header.ram_size()?;
+    let mapper_type = header.mapper_type();
+
+    let rom = Memory::from(rom);
+    let ram = match ram {
+        Some(buf) => Memory::from(buf),
+        None => Memory::with_size(ram_size),
+    };
+
     if usize::from(rom_size) != rom.len() {
         bail!(
             "ROM size mismatch (expected {:#x}, got {:#x})",
@@ -32,12 +39,15 @@ pub fn load_cartridge(rom: Vec<u8>) -> Result<MmuState> {
             rom.len()
         );
     }
+    if usize::from(ram_size) != ram.len() {
+        bail!(
+            "RAM size mismatch (expected {:#x}, got {:#x})",
+            ram_size,
+            ram.len()
+        );
+    }
 
-    let typ = header.cartridge_type();
-    let rom = Memory::from(rom);
-    let ram = Memory::with_size(ram_size);
-
-    let mapper = match typ.mapper {
+    let mapper = match mapper_type {
         MapperType::None => mapper::load_rom_only(rom)?,
         MapperType::Mbc1 => mapper::load_mbc1(rom, ram)?,
         MapperType::Mbc3 => todo!("MBC3"),
@@ -172,5 +182,9 @@ impl MmuState {
 
     pub fn enable_serial_printing(&mut self) {
         self.serial_out = Some(0);
+    }
+
+    pub fn store_ram<W: Write>(&self, w: W) -> Result<()> {
+        self.mapper.store_ram(w)
     }
 }

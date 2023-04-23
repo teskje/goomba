@@ -33,19 +33,15 @@ impl Header {
         Ok(header)
     }
 
-    pub fn cartridge_type(&self) -> Type {
+    pub fn mapper_type(&self) -> MapperType {
         use MapperType::*;
 
-        let (mapper, battery) = match self.cartridge_type {
-            0x00 => (None, false),
-            0x01 | 0x02 => (Mbc1, false),
-            0x03 => (Mbc1, true),
-            0x11 | 0x12 => (Mbc3, false),
-            0x13 => (Mbc3, true),
-            code => (Unsupported(code), false),
-        };
-
-        Type { mapper, battery }
+        match self.cartridge_type {
+            0x00 => None,
+            0x01 | 0x02 | 0x03 => Mbc1,
+            0x11 | 0x12 | 0x13 => Mbc3,
+            code => Unsupported(code),
+        }
     }
 
     pub fn rom_size(&self) -> Result<usize> {
@@ -75,11 +71,6 @@ fn compute_header_checksum(data: &[u8]) -> u8 {
         checksum = checksum.wrapping_sub(*byte).wrapping_sub(1);
     }
     checksum
-}
-
-pub struct Type {
-    pub mapper: MapperType,
-    pub battery: bool,
 }
 
 pub enum MapperType {

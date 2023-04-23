@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use anyhow::{Context, Result};
 
 use log::warn;
@@ -39,10 +41,17 @@ impl Mapper {
         }
     }
 
-    pub fn write_ram(&mut self, addr: u16, value: u8) {
+    pub(super) fn write_ram(&mut self, addr: u16, value: u8) {
         match self {
             Self::RomOnly(_) => warn!("RAM write not supported"),
             Self::Mbc1(m) => m.write_ram(addr, value),
+        }
+    }
+
+    pub(super) fn store_ram<W: Write>(&self, w: W) -> Result<()> {
+        match self {
+            Self::RomOnly(_) => Ok(()),
+            Self::Mbc1(m) => m.store_ram(w),
         }
     }
 }

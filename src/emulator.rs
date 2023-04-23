@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use log::error;
+use log::{error, info};
 
 use crate::cpu::Cpu;
 use crate::dma::Dma;
@@ -14,19 +14,26 @@ use crate::Config;
 
 pub struct Emulator {
     state: State,
-    save_path: PathBuf,
+    savestate_path: PathBuf,
+    ram_path: Option<PathBuf>,
 }
 
 impl Emulator {
     pub fn load(config: Config) -> Result<Self> {
-        let mut state = State::load_from(&config.path)?;
+        let base_path = config.path;
+        let ram_path = config.ram_path;
+        let savestate_path = base_path.with_extension("gmba");
+
+        let mut state = State::load_from(&base_path, ram_path.as_deref())?;
         if config.print_serial {
             state.mmu.enable_serial_printing();
         }
 
-        let save_path = config.path.with_extension("gmba");
-
-        Ok(Self { state, save_path })
+        Ok(Self {
+            state,
+            savestate_path,
+            ram_path,
+        })
     }
 
     pub fn render_frame(&mut self) -> Result<Frame> {
@@ -53,9 +60,19 @@ impl Emulator {
         Joypad::new(&mut self.state).release_button(button);
     }
 
-    pub fn save_game(&self) {
-        if let Err(error) = self.state.store_save(&self.save_path) {
-            error!("cannot save game: {error}");
+    pub fn save_state(&self) {
+        let path = &self.savestate_path;
+        match self.state.store_save(path) {
+            Ok(()) => info!("saved state to {path:?}"),
+            Err(e) => error!("cannot save state: {e:#}"),
+        }
+    }
+
+    pub fn save_ram(&self) {
+        let Some(path) = &self.ram_path else { return };
+        match self.state.store_ram(path) {
+            Ok(()) => info!("saved RAM to {path:?}"),
+            Err(e) => error!("cannot save RAM: {e:#}"),
         }
     }
 }

@@ -1,4 +1,5 @@
 use std::cmp;
+use std::io::Write;
 
 use anyhow::{bail, Result};
 use log::warn;
@@ -58,6 +59,11 @@ impl Mapper {
             Some(v) => *v = value,
             None => warn!("invalid RAM write addr: {addr:#x}"),
         }
+    }
+
+    pub(super) fn store_ram<W: Write>(&self, mut w: W) -> Result<()> {
+        w.write_all(self.ram.as_slice())?;
+        Ok(())
     }
 }
 

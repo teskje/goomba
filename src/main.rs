@@ -22,6 +22,9 @@ pub struct Config {
     /// path of the cartridge or savegame file to execute
     #[argh(positional)]
     path: PathBuf,
+    /// path of persistent cartridge RAM
+    #[argh(option)]
+    ram_path: Option<PathBuf>,
     /// print serial output
     #[argh(switch)]
     print_serial: bool,

@@ -26,6 +26,10 @@ impl Memory {
     {
         self.0.get_mut(index.into())
     }
+
+    pub(super) fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
 }
 
 impl From<Vec<u8>> for Memory {
@@ -58,14 +62,18 @@ impl<const N: u16> Banked<N> {
     }
 
     pub(super) fn get(&self, bank: u8, offset: u16) -> Option<u8> {
-        self.0.get(Self::index(bank, offset))
+        self.0.get(Self::idx(bank, offset))
     }
 
     pub(super) fn get_mut(&mut self, bank: u8, offset: u16) -> Option<&mut u8> {
-        self.0.get_mut(Self::index(bank, offset))
+        self.0.get_mut(Self::idx(bank, offset))
     }
 
-    fn index(bank: u8, offset: u16) -> usize {
+    pub(super) fn as_slice(&self) -> &[u8] {
+        self.0.as_slice()
+    }
+
+    fn idx(bank: u8, offset: u16) -> usize {
         usize::from(bank) * usize::from(N) + usize::from(offset)
     }
 }
@@ -86,12 +94,12 @@ impl<const N: u16> Index<(u8, u16)> for Banked<N> {
     type Output = u8;
 
     fn index(&self, (bank, offset): (u8, u16)) -> &Self::Output {
-        self.0.index(Self::index(bank, offset))
+        self.0.index(Self::idx(bank, offset))
     }
 }
 
 impl<const N: u16> IndexMut<(u8, u16)> for Banked<N> {
     fn index_mut(&mut self, (bank, offset): (u8, u16)) -> &mut Self::Output {
-        self.0.index_mut(Self::index(bank, offset))
+        self.0.index_mut(Self::idx(bank, offset))
     }
 }

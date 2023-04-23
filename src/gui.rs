@@ -47,18 +47,22 @@ impl Handler {
 
     fn handle(&mut self, event: Event<()>) -> Result<(), i32> {
         if self.input.update(&event) {
-            self.handle_close()?;
+            self.handle_close_request()?;
             self.handle_resize()?;
             self.handle_keypresses()?;
             self.render_frame()?;
         }
 
+        if event == Event::LoopDestroyed {
+            info!("window closed; shutting down");
+            self.emulator.save_ram();
+        }
+
         Ok(())
     }
 
-    fn handle_close(&self) -> Result<(), i32> {
+    fn handle_close_request(&self) -> Result<(), i32> {
         if self.input.close_requested() {
-            info!("window close requested; shutting down");
             Err(CODE_CLOSE)
         } else {
             Ok(())
@@ -87,7 +91,7 @@ impl Handler {
         }
 
         if self.input.key_pressed(VirtualKeyCode::S) && self.input.held_control() {
-            self.emulator.save_game();
+            self.emulator.save_state();
         }
 
         Ok(())
