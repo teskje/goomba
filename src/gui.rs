@@ -1,5 +1,3 @@
-use std::sync::mpsc;
-
 use anyhow::Result;
 use log::{error, info};
 use pixels::{Pixels, SurfaceTexture};
@@ -8,20 +6,21 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
-use crate::frame::{self, Frame};
-use crate::input::{self, Button};
+use crate::emulator::Emulator;
+use crate::frame;
+use crate::joypad::Button;
 
 const CODE_CLOSE: i32 = 0;
 const CODE_ERROR: i32 = 1;
 
-pub fn run(frame_rx: mpsc::Receiver<Frame>, input_tx: mpsc::Sender<input::Event>) -> Result<()> {
+pub fn run(emu: Emulator) -> Result<()> {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop)?;
     let size = window.inner_size();
     let surface = SurfaceTexture::new(size.width, size.height, &window);
     let pixels = Pixels::new(frame::WIDTH, frame::HEIGHT, surface)?;
 
-    let mut handler = Handler::new(pixels, frame_rx, input_tx);
+    let mut handler = Handler::new(emu, pixels);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = match handler.handle(event) {
@@ -32,22 +31,16 @@ pub fn run(frame_rx: mpsc::Receiver<Frame>, input_tx: mpsc::Sender<input::Event>
 }
 
 struct Handler {
+    emulator: Emulator,
     pixels: Pixels,
-    frame_rx: mpsc::Receiver<Frame>,
-    input_tx: mpsc::Sender<input::Event>,
     input: WinitInputHelper,
 }
 
 impl Handler {
-    fn new(
-        pixels: Pixels,
-        frame_rx: mpsc::Receiver<Frame>,
-        input_tx: mpsc::Sender<input::Event>,
-    ) -> Self {
+    fn new(emulator: Emulator, pixels: Pixels) -> Self {
         Self {
+            emulator,
             pixels,
-            frame_rx,
-            input_tx,
             input: WinitInputHelper::new(),
         }
     }
@@ -83,35 +76,28 @@ impl Handler {
             })
     }
 
-    fn handle_keypresses(&self) -> Result<(), i32> {
+    fn handle_keypresses(&mut self) -> Result<(), i32> {
         for (button, keycode) in Button::KEYCODES {
             if self.input.key_pressed(keycode) {
-                self.send_input(input::Event::ButtonPress(button))?;
+                self.emulator.press_button(button);
             }
             if self.input.key_released(keycode) {
-                self.send_input(input::Event::ButtonRelease(button))?;
+                self.emulator.release_button(button);
             }
         }
 
         if self.input.key_pressed(VirtualKeyCode::S) && self.input.held_control() {
-            self.send_input(input::Event::Save)?;
+            self.emulator.save_game();
         }
 
         Ok(())
     }
 
-    fn send_input(&self, event: input::Event) -> Result<(), i32> {
-        self.input_tx.send(event).map_err(|_| {
-            error!("input receiver has hung up");
-            CODE_ERROR
-        })
-    }
-
     fn render_frame(&mut self) -> Result<(), i32> {
-        let Ok(frame) = self.frame_rx.recv() else {
-            error!("frame writer has hung up");
-            return Err(CODE_ERROR);
-        };
+        let frame = self.emulator.render_frame().map_err(|error| {
+            error!("emulator error: {error:#}");
+            CODE_ERROR
+        })?;
 
         frame
             .write_into(self.pixels.get_frame_mut())

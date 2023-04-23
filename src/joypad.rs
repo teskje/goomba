@@ -1,5 +1,4 @@
 use crate::bits::BitsExt;
-use crate::input::Button;
 use crate::state::State;
 
 pub struct Joypad<'a> {
@@ -88,4 +87,16 @@ impl Buttons {
 struct Select {
     direction: bool,
     action: bool,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Button {
+    Up,
+    Down,
+    Left,
+    Right,
+    A,
+    B,
+    Start,
+    Select,
 }
