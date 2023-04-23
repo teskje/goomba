@@ -1,8 +1,8 @@
 use crate::bits::BitsExt;
 use crate::frame::Frame;
 
-use super::{Mode, object};
 use super::fetcher::Fetch;
+use super::{object, Mode};
 
 #[derive(Debug, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]

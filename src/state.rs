@@ -26,16 +26,16 @@ pub struct State {
 
 impl State {
     pub fn load_from(path: &Path) -> Result<Self> {
-        let mut file = File::open(path).context("opening {path}")?;
+        let mut file = File::open(path).with_context(|| format!("opening {path:?}"))?;
 
         let mut tag = [0; SAVESTATE_TAG.len()];
         file.read_exact(&mut tag).ok();
 
         if tag == SAVESTATE_TAG {
-            Self::load_save(file).context("loading savestate from {path}")
+            Self::load_save(file).with_context(|| format!("loading savestate from {path:?}"))
         } else {
             file.rewind()?;
-            Self::load_cartridge(file).context("loading cartridge from {path}")
+            Self::load_cartridge(file).with_context(|| format!("loading cartridge from {path:?}"))
         }
     }
 
@@ -60,11 +60,12 @@ impl State {
     }
 
     pub fn store_save(&self, path: &Path) -> Result<()> {
-        let mut file = File::create(path).context("creating {path}")?;
+        let mut file = File::create(path).with_context(|| format!("creating {path:?}"))?;
 
         file.write_all(SAVESTATE_TAG)
-            .context("writing tag to {path}")?;
+            .with_context(|| format!("writing tag to {path:?}"))?;
 
-        rmp_serde::encode::write_named(&mut file, self).context("writing state to {path}")
+        rmp_serde::encode::write_named(&mut file, self)
+            .with_context(|| format!("writing state to {path:?}"))
     }
 }

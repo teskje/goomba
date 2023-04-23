@@ -2,8 +2,8 @@ use anyhow::{bail, Result};
 
 use log::warn;
 
-use crate::mmu::KB;
 use crate::mmu::memory::Memory;
+use crate::mmu::KB;
 
 const ROM_SIZE: usize = 32 * KB;
 
@@ -25,6 +25,6 @@ impl Mapper {
 pub(super) fn load(rom: Memory) -> Result<Mapper> {
     if rom.len() != ROM_SIZE {
         bail!("invalid ROM size: {:#x}", rom.len());
-    } 
+    }
     Ok(Mapper { rom })
 }
