@@ -20,7 +20,7 @@ const HIGH_RAM_SIZE: usize = 127;
 const VIDEO_RAM_SIZE: usize = 8 * KB;
 const OAM_SIZE: usize = 160;
 
-pub fn load_cartridge(rom: Vec<u8>, ram: Option<Vec<u8>>) -> Result<MmuState> {
+pub(crate) fn load_cartridge(rom: Vec<u8>, ram: Option<Vec<u8>>) -> Result<MmuState> {
     let header = cartridge::Header::parse(&rom[0x100..]).context("reading cartridge header")?;
     let rom_size = header.rom_size()?;
     let ram_size = header.ram_size()?;
@@ -57,7 +57,7 @@ pub fn load_cartridge(rom: Vec<u8>, ram: Option<Vec<u8>>) -> Result<MmuState> {
     Ok(MmuState::new(mapper))
 }
 
-pub struct Mmu<'a> {
+pub(crate) struct Mmu<'a> {
     s: &'a mut State,
 }
 
@@ -159,7 +159,7 @@ impl<'a> Mmu<'a> {
 
 #[derive(Debug)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct MmuState {
+pub(crate) struct MmuState {
     mapper: Mapper,
     work_ram: Memory,
     high_ram: Memory,

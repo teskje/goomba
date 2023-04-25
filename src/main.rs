@@ -1,24 +1,14 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use emulator::Emulator;
 
-mod bits;
-mod cartridge;
-mod cpu;
-mod dma;
-mod emulator;
-mod frame;
+use emulator::{Config, Emulator};
+
 mod gui;
-mod joypad;
-mod mmu;
-mod ppu;
-mod state;
-mod timer;
 
 /// An emulator for the classic GameBoy.
 #[derive(argh::FromArgs)]
-pub struct Config {
+struct Args {
     /// path of the cartridge or savegame file to execute
     #[argh(positional)]
     path: PathBuf,
@@ -31,10 +21,15 @@ pub struct Config {
 }
 
 fn main() -> Result<()> {
-    let config: Config = argh::from_env();
+    let args: Args = argh::from_env();
 
     env_logger::init();
 
-    let emu = Emulator::load(config)?;
+    let emu = Emulator::load(Config {
+        path: args.path,
+        ram_path: args.ram_path,
+        print_serial: args.print_serial,
+    })?;
+
     gui::run(emu)
 }

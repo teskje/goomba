@@ -2,10 +2,6 @@ use std::io::Write;
 
 use anyhow::{bail, Result};
 
-pub const WIDTH: u32 = 160;
-pub const HEIGHT: u32 = 144;
-
-const PIXEL_COUNT: usize = (WIDTH * HEIGHT) as usize;
 const RGBA_WHITE: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
 
 #[derive(Debug)]
@@ -15,23 +11,28 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub fn new() -> Self {
+    pub const WIDTH: u32 = 160;
+    pub const HEIGHT: u32 = 144;
+
+    const PIXEL_COUNT: usize = (Self::WIDTH * Self::HEIGHT) as usize;
+
+    pub(crate) fn new() -> Self {
         Self {
-            pixels: Vec::with_capacity(PIXEL_COUNT),
+            pixels: Vec::with_capacity(Self::PIXEL_COUNT),
         }
     }
 
-    pub fn push_pixel(&mut self, color: Color) {
+    pub(crate) fn push_pixel(&mut self, color: Color) {
         self.pixels.push(color);
     }
 
     pub fn write_into(&self, mut buffer: &mut [u8]) -> Result<()> {
-        if buffer.len() != PIXEL_COUNT * 4 {
+        if buffer.len() != Self::PIXEL_COUNT * 4 {
             bail!("invalid buffer size: {}", buffer.len());
         }
 
         let mut pixels = self.pixels.iter();
-        for _ in 0..PIXEL_COUNT {
+        for _ in 0..Self::PIXEL_COUNT {
             let bytes = pixels.next().map(Color::rgba).unwrap_or(RGBA_WHITE);
             buffer.write_all(&bytes).unwrap();
         }
@@ -49,7 +50,7 @@ impl Default for Frame {
 
 #[derive(Clone, Copy, Debug, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub enum Color {
+pub(crate) enum Color {
     #[default]
     White,
     Light,

@@ -1,7 +1,7 @@
 use crate::mmu::Mmu;
 use crate::state::State;
 
-pub struct Dma<'a> {
+pub(crate) struct Dma<'a> {
     s: &'a mut State,
 }
 
@@ -48,7 +48,7 @@ impl<'a> Dma<'a> {
 
 #[derive(Debug, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct DmaState {
+pub(crate) struct DmaState {
     source_addr_high: u8,
     triggered: bool,
     progress: Option<Progress>,

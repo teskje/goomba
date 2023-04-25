@@ -15,7 +15,7 @@ const SAVESTATE_TAG: &[u8] = b"goomba:savestate\n";
 
 #[derive(Debug)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct State {
+pub(crate) struct State {
     pub mmu: MmuState,
     pub timer: TimerState,
     pub joypad: JoypadState,

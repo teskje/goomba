@@ -1,7 +1,7 @@
 use std::mem;
 
 use crate::cpu::Interrupt;
-use crate::frame::{self, Frame};
+use crate::frame::Frame;
 use crate::state::State;
 
 mod fetcher;
@@ -10,12 +10,13 @@ mod object;
 mod state;
 
 use self::fetcher::{Fetch, Fetcher};
-pub use self::state::PpuState;
+
+pub(crate) use self::state::PpuState;
 
 const FRAME_LINES: u32 = 154;
 const LINE_DOTS: u16 = 456;
 
-pub struct Ppu<'a> {
+pub(crate) struct Ppu<'a> {
     s: &'a mut State,
     ready_frame: Option<Frame>,
 }
@@ -57,9 +58,9 @@ impl<'a> Ppu<'a> {
 
         let y = u32::from(self.s.ppu.registers.ly);
         let mode = self.s.ppu.mode;
-        if y < frame::HEIGHT && mode == Mode::HBlank {
+        if y < Frame::HEIGHT && mode == Mode::HBlank {
             self.enter_oam_scan();
-        } else if y == frame::HEIGHT && mode == Mode::HBlank {
+        } else if y == Frame::HEIGHT && mode == Mode::HBlank {
             self.enter_vblank();
         } else if y == FRAME_LINES {
             self.end_frame();
@@ -124,7 +125,7 @@ impl<'a> Ppu<'a> {
             self.s.ppu.draw_x += 1;
         }
 
-        if u32::from(self.s.ppu.draw_x) == frame::WIDTH {
+        if u32::from(self.s.ppu.draw_x) == Frame::WIDTH {
             self.set_mode(Mode::HBlank);
         }
     }

@@ -6,7 +6,7 @@ use super::{object, Mode};
 
 #[derive(Debug, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct PpuState {
+pub(crate) struct PpuState {
     pub(super) registers: Registers,
     pub(super) mode: Mode,
     pub(super) line_dots: u16,

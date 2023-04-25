@@ -4,7 +4,7 @@ use crate::bits::BitsExt;
 use crate::cpu::{Interrupt, InterruptState};
 use crate::state::State;
 
-pub struct Timer<'a> {
+pub(crate) struct Timer<'a> {
     t: &'a mut TimerState,
     interrupts: &'a mut InterruptState,
 }
@@ -51,7 +51,7 @@ impl<'a> Timer<'a> {
 
 #[derive(Debug, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct TimerState {
+pub(crate) struct TimerState {
     counter: u16,
     tima: u8,
     tma: u8,

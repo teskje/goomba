@@ -6,7 +6,7 @@ use super::execute::Op;
 use super::Cpu;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Interrupt {
+pub(crate) enum Interrupt {
     VBlank,
     LcdStat,
     Timer,

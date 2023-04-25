@@ -10,10 +10,10 @@ mod execute;
 mod interrupt;
 mod state;
 
-pub use self::interrupt::Interrupt;
-pub use self::state::{CpuState, InterruptState};
+pub(crate) use self::interrupt::Interrupt;
+pub(crate) use self::state::{CpuState, InterruptState};
 
-pub struct Cpu<'a> {
+pub(crate) struct Cpu<'a> {
     s: &'a mut State,
     must_yield: bool,
 }

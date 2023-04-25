@@ -5,7 +5,7 @@ const KB: usize = 1024;
 
 #[derive(Clone, Copy, View)]
 #[repr(C)]
-pub struct Header {
+pub(crate) struct Header {
     entry_point: [u8; 4],
     logo: [u8; 48],
     title: [u8; 16],
@@ -73,7 +73,7 @@ fn compute_header_checksum(data: &[u8]) -> u8 {
     checksum
 }
 
-pub enum MapperType {
+pub(crate) enum MapperType {
     None,
     Mbc1,
     Mbc3,

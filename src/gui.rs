@@ -6,9 +6,7 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
-use crate::emulator::Emulator;
-use crate::frame;
-use crate::joypad::Button;
+use emulator::{Button, Emulator, Frame};
 
 const CODE_CLOSE: i32 = 0;
 const CODE_ERROR: i32 = 1;
@@ -18,7 +16,7 @@ pub fn run(emu: Emulator) -> Result<()> {
     let window = WindowBuilder::new().build(&event_loop)?;
     let size = window.inner_size();
     let surface = SurfaceTexture::new(size.width, size.height, &window);
-    let pixels = Pixels::new(frame::WIDTH, frame::HEIGHT, surface)?;
+    let pixels = Pixels::new(Frame::WIDTH, Frame::HEIGHT, surface)?;
 
     let mut handler = Handler::new(emu, pixels);
 
@@ -81,7 +79,18 @@ impl Handler {
     }
 
     fn handle_keypresses(&mut self) -> Result<(), i32> {
-        for (button, keycode) in Button::KEYCODES {
+        const BUTTON_KEYCODES: [(Button, VirtualKeyCode); 8] = [
+            (Button::Up, VirtualKeyCode::Up),
+            (Button::Down, VirtualKeyCode::Down),
+            (Button::Left, VirtualKeyCode::Left),
+            (Button::Right, VirtualKeyCode::Right),
+            (Button::A, VirtualKeyCode::X),
+            (Button::B, VirtualKeyCode::Z),
+            (Button::Start, VirtualKeyCode::Return),
+            (Button::Select, VirtualKeyCode::Back),
+        ];
+
+        for (button, keycode) in BUTTON_KEYCODES {
             if self.input.key_pressed(keycode) {
                 self.emulator.press_button(button);
             }
@@ -112,17 +121,4 @@ impl Handler {
             CODE_ERROR
         })
     }
-}
-
-impl Button {
-    const KEYCODES: [(Self, VirtualKeyCode); 8] = [
-        (Self::Up, VirtualKeyCode::Up),
-        (Self::Down, VirtualKeyCode::Down),
-        (Self::Left, VirtualKeyCode::Left),
-        (Self::Right, VirtualKeyCode::Right),
-        (Self::A, VirtualKeyCode::X),
-        (Self::B, VirtualKeyCode::Z),
-        (Self::Start, VirtualKeyCode::Return),
-        (Self::Select, VirtualKeyCode::Back),
-    ];
 }

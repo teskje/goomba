@@ -5,7 +5,7 @@ use super::interrupt::Interrupt;
 
 #[derive(Debug)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct CpuState {
+pub(crate) struct CpuState {
     pub interrupts: InterruptState,
 
     pub(super) registers: Registers,
@@ -33,7 +33,7 @@ impl Default for CpuState {
 
 #[derive(Debug, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct InterruptState {
+pub(crate) struct InterruptState {
     pub(super) enable_bits: u8,
     pub(super) flag_bits: u8,
 }

@@ -5,12 +5,30 @@ use log::{error, info};
 
 use crate::cpu::Cpu;
 use crate::dma::Dma;
-use crate::frame::Frame;
-use crate::joypad::{Button, Joypad};
+use crate::joypad::Joypad;
 use crate::ppu::Ppu;
 use crate::state::State;
 use crate::timer::Timer;
-use crate::Config;
+
+mod bits;
+mod cartridge;
+mod cpu;
+mod dma;
+mod frame;
+mod joypad;
+mod mmu;
+mod ppu;
+mod state;
+mod timer;
+
+pub use frame::Frame;
+pub use joypad::Button;
+
+pub struct Config {
+    pub path: PathBuf,
+    pub ram_path: Option<PathBuf>,
+    pub print_serial: bool,
+}
 
 pub struct Emulator {
     state: State,

@@ -1,7 +1,7 @@
 use crate::bits::BitsExt;
 use crate::state::State;
 
-pub struct Joypad<'a> {
+pub(crate) struct Joypad<'a> {
     j: &'a mut JoypadState,
 }
 
@@ -23,7 +23,7 @@ impl<'a> Joypad<'a> {
 
 #[derive(Debug, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct JoypadState {
+pub(crate) struct JoypadState {
     buttons: Buttons,
     select: Select,
 }

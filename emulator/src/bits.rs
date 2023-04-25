@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-pub trait BitsExt: Sized {
+pub(crate) trait BitsExt: Sized {
     fn bit(&self, i: u8) -> bool;
     fn bits(&self, r: RangeInclusive<u8>) -> Self;
     fn set_bit(&mut self, i: u8);
