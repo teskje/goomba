@@ -15,9 +15,6 @@ struct Args {
     /// path of persistent cartridge RAM
     #[argh(option)]
     ram_path: Option<PathBuf>,
-    /// print serial output
-    #[argh(switch)]
-    print_serial: bool,
 }
 
 fn main() -> Result<()> {
@@ -28,7 +25,6 @@ fn main() -> Result<()> {
     let emu = Emulator::load(Config {
         path: args.path,
         ram_path: args.ram_path,
-        print_serial: args.print_serial,
     })?;
 
     gui::run(emu)

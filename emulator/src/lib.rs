@@ -27,7 +27,6 @@ pub use joypad::Button;
 pub struct Config {
     pub path: PathBuf,
     pub ram_path: Option<PathBuf>,
-    pub print_serial: bool,
 }
 
 pub struct Emulator {
@@ -42,10 +41,7 @@ impl Emulator {
         let ram_path = config.ram_path;
         let savestate_path = base_path.with_extension("gmba");
 
-        let mut state = State::load_from(&base_path, ram_path.as_deref())?;
-        if config.print_serial {
-            state.mmu.enable_serial_printing();
-        }
+        let state = State::load_from(&base_path, ram_path.as_deref())?;
 
         Ok(Self {
             state,

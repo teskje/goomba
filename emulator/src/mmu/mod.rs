@@ -1,9 +1,8 @@
-use std::io::{self, Write};
+use std::io::Write;
 
 use anyhow::{bail, Context, Result};
 use log::{trace, warn};
 
-use crate::bits::BitsExt;
 use crate::cartridge::{self, MapperType};
 use crate::state::State;
 
@@ -115,8 +114,7 @@ impl<'a> Mmu<'a> {
             0xc000..=0xdfff => self.s.mmu.work_ram[addr - 0xc000] = value,
             0xfe00..=0xfe9f => self.s.mmu.oam[addr - 0xfe00] = value,
             0xff00 => self.s.joypad.write_p1(value),
-            0xff01 => self.write_sb(value),
-            0xff02 => self.write_sc(value),
+            0xff01..=0xff02 => (), // serial registers
             0xff04 => self.s.timer.write_div(value),
             0xff05 => self.s.timer.write_tima(value),
             0xff06 => self.s.timer.write_tma(value),
@@ -140,21 +138,6 @@ impl<'a> Mmu<'a> {
             _ => warn!("unknown write address: {addr:#x}"),
         };
     }
-
-    fn write_sb(&mut self, value: u8) {
-        if let Some(out) = &mut self.s.mmu.serial_out {
-            *out = value;
-        }
-    }
-
-    fn write_sc(&mut self, value: u8) {
-        if value.bit(7) {
-            self.s.mmu.serial_out.map(|b| {
-                print!("{}", char::from(b));
-                io::stdout().flush().unwrap();
-            });
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -165,7 +148,6 @@ pub(crate) struct MmuState {
     high_ram: Memory,
     video_ram: Memory,
     oam: Memory,
-    serial_out: Option<u8>,
 }
 
 impl MmuState {
@@ -176,12 +158,7 @@ impl MmuState {
             high_ram: Memory::with_size(HIGH_RAM_SIZE),
             video_ram: Memory::with_size(VIDEO_RAM_SIZE),
             oam: Memory::with_size(OAM_SIZE),
-            serial_out: None,
         }
-    }
-
-    pub fn enable_serial_printing(&mut self) {
-        self.serial_out = Some(0);
     }
 
     pub fn store_ram<W: Write>(&self, w: W) -> Result<()> {
