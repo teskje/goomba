@@ -25,6 +25,7 @@ log.workspace = true
 argh = "0.1"
 env_logger = "0.10"
 pixels = "0.11"
+rfd = "0.11"
 winit = "0.28"
 winit_input_helper = "0.14"
 emulator = { path = "emulator" }

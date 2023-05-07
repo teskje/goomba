@@ -1,6 +1,7 @@
 use anyhow::Result;
 use log::{error, info};
 use pixels::{Pixels, SurfaceTexture};
+use rfd::FileDialog;
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
@@ -53,7 +54,7 @@ impl Handler {
 
         if event == Event::LoopDestroyed {
             info!("window closed; shutting down");
-            // self.emulator.save_ram();
+            self.save_ram();
         }
 
         Ok(())
@@ -100,7 +101,7 @@ impl Handler {
         }
 
         if self.input.key_pressed(VirtualKeyCode::S) && self.input.held_control() {
-            // self.emulator.save_state();
+            self.save_state();
         }
 
         Ok(())
@@ -120,5 +121,27 @@ impl Handler {
             error!("render error: {error}");
             CODE_ERROR
         })
+    }
+
+    fn save_ram(&self) {
+        let path = FileDialog::new()
+            .set_title("Save cartridge RAM?")
+            .add_filter("RAM dump", &["gb-ram"])
+            .save_file();
+
+        if let Some(path) = path {
+            self.emulator.save_ram(&path);
+        }
+    }
+
+    fn save_state(&self) {
+        let path = FileDialog::new()
+            .set_title("Pick a savestate file")
+            .add_filter("savestate", &["gb-save"])
+            .save_file();
+
+        if let Some(path) = path {
+            self.emulator.save_state(&path);
+        }
     }
 }
