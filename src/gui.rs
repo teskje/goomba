@@ -53,7 +53,7 @@ impl Handler {
 
         if event == Event::LoopDestroyed {
             info!("window closed; shutting down");
-            self.emulator.save_ram();
+            // self.emulator.save_ram();
         }
 
         Ok(())
@@ -100,7 +100,7 @@ impl Handler {
         }
 
         if self.input.key_pressed(VirtualKeyCode::S) && self.input.held_control() {
-            self.emulator.save_state();
+            // self.emulator.save_state();
         }
 
         Ok(())

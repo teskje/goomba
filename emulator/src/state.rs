@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{Read, Seek, Write};
+use std::io::Write;
 use std::path::Path;
 
 use anyhow::{Context, Result};
@@ -25,39 +25,15 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub fn load_from(base_path: &Path, ram_path: Option<&Path>) -> Result<Self> {
-        let mut base_file =
-            File::open(base_path).with_context(|| format!("opening {base_path:?}"))?;
-
-        let ram_file = match ram_path {
-            Some(p) if p.exists() => {
-                let file = File::open(p).with_context(|| format!("opening {p:?}"))?;
-                Some(file)
-            }
-            _ => None,
-        };
-
-        let mut tag = [0; SAVESTATE_TAG.len()];
-        base_file.read_exact(&mut tag).ok();
-
-        if tag == SAVESTATE_TAG {
-            Self::load_save(base_file)
-                .with_context(|| format!("loading savestate from {base_path:?}"))
+    pub fn load(rom_or_save: Vec<u8>, ram: Option<Vec<u8>>) -> Result<Self> {
+        if rom_or_save.starts_with(&SAVESTATE_TAG) {
+            Self::load_save(&rom_or_save).context("loading savestate")
         } else {
-            base_file.rewind()?;
-            Self::load_cartridge(base_file, ram_file).with_context(|| {
-                format!("loading cartridge from rom={base_path:?}, ram={ram_path:?}")
-            })
+            Self::load_cartridge(rom_or_save, ram).context("loading cartridge")
         }
     }
 
-    fn load_cartridge(rom_file: File, ram_file: Option<File>) -> Result<Self> {
-        let rom = read_file(rom_file)?;
-        let ram = match ram_file {
-            Some(f) => Some(read_file(f)?),
-            None => None,
-        };
-
+    fn load_cartridge(rom: Vec<u8>, ram: Option<Vec<u8>>) -> Result<Self> {
         let mmu_state = mmu::load_cartridge(rom, ram)?;
 
         Ok(Self {
@@ -70,8 +46,9 @@ impl State {
         })
     }
 
-    fn load_save(file: File) -> Result<Self> {
-        rmp_serde::decode::from_read(&file).map_err(Into::into)
+    fn load_save(save: &[u8]) -> Result<Self> {
+        let save = &save[SAVESTATE_TAG.len()..];
+        rmp_serde::decode::from_slice(save).map_err(Into::into)
     }
 
     pub fn store_save(&self, path: &Path) -> Result<()> {
@@ -93,10 +70,4 @@ impl State {
 
         fs::rename(&tmp_path, path).with_context(|| format!("renaming {tmp_path:?} to {path:?}"))
     }
-}
-
-fn read_file(mut file: File) -> Result<Vec<u8>> {
-    let mut buf = Vec::new();
-    file.read_to_end(&mut buf)?;
-    Ok(buf)
 }

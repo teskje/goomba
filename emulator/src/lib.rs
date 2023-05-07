@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use anyhow::Result;
 use log::{error, info};
@@ -24,30 +24,15 @@ mod timer;
 pub use frame::Frame;
 pub use joypad::Button;
 
-pub struct Config {
-    pub path: PathBuf,
-    pub ram_path: Option<PathBuf>,
-}
-
 pub struct Emulator {
     state: State,
-    savestate_path: PathBuf,
-    ram_path: Option<PathBuf>,
 }
 
 impl Emulator {
-    pub fn load(config: Config) -> Result<Self> {
-        let base_path = config.path;
-        let ram_path = config.ram_path;
-        let savestate_path = base_path.with_extension("gmba");
+    pub fn load(rom_or_save: Vec<u8>, ram: Option<Vec<u8>>) -> Result<Self> {
+        let state = State::load(rom_or_save, ram)?;
 
-        let state = State::load_from(&base_path, ram_path.as_deref())?;
-
-        Ok(Self {
-            state,
-            savestate_path,
-            ram_path,
-        })
+        Ok(Self { state })
     }
 
     pub fn render_frame(&mut self) -> Result<Frame> {
@@ -74,16 +59,14 @@ impl Emulator {
         Joypad::new(&mut self.state).release_button(button);
     }
 
-    pub fn save_state(&self) {
-        let path = &self.savestate_path;
+    pub fn save_state(&self, path: &Path) {
         match self.state.store_save(path) {
             Ok(()) => info!("saved state to {path:?}"),
             Err(e) => error!("cannot save state: {e:#}"),
         }
     }
 
-    pub fn save_ram(&self) {
-        let Some(path) = &self.ram_path else { return };
+    pub fn save_ram(&self, path: &Path) {
         match self.state.store_ram(path) {
             Ok(()) => info!("saved RAM to {path:?}"),
             Err(e) => error!("cannot save RAM: {e:#}"),

@@ -1,8 +1,9 @@
+use std::fs;
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
-use emulator::{Config, Emulator};
+use emulator::Emulator;
 
 mod gui;
 
@@ -18,14 +19,21 @@ struct Args {
 }
 
 fn main() -> Result<()> {
-    let args: Args = argh::from_env();
-
     env_logger::init();
 
-    let emu = Emulator::load(Config {
-        path: args.path,
-        ram_path: args.ram_path,
-    })?;
+    let args: Args = argh::from_env();
+
+    let rom_or_save = fs::read(&args.path).with_context(|| format!("opening {:?}", args.path))?;
+
+    let ram = match &args.ram_path {
+        Some(p) if p.exists() => {
+            let ram = fs::read(p).with_context(|| format!("opening {p:?}"))?;
+            Some(ram)
+        }
+        _ => None,
+    };
+
+    let emu = Emulator::load(rom_or_save, ram)?;
 
     gui::run(emu)
 }
