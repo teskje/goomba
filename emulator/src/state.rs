@@ -26,7 +26,7 @@ pub(crate) struct State {
 
 impl State {
     pub fn load(rom_or_save: Vec<u8>, ram: Option<Vec<u8>>) -> Result<Self> {
-        if rom_or_save.starts_with(&SAVESTATE_TAG) {
+        if rom_or_save.starts_with(SAVESTATE_TAG) {
             Self::load_save(&rom_or_save).context("loading savestate")
         } else {
             Self::load_cartridge(rom_or_save, ram).context("loading cartridge")

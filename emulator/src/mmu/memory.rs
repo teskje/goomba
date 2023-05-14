@@ -10,7 +10,7 @@ impl Memory {
     }
 
     pub(super) fn len(&self) -> usize {
-        self.0.len().try_into().unwrap()
+        self.0.len()
     }
 
     pub(super) fn get<I>(&self, index: I) -> Option<u8>

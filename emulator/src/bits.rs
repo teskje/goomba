@@ -14,7 +14,7 @@ impl BitsExt for u8 {
 
     fn bits(&self, r: RangeInclusive<u8>) -> Self {
         let (s, e) = r.into_inner();
-        let mask = ((1_u16 << e + 1) - 1) as u8;
+        let mask = ((1_u16 << (e + 1)) - 1) as u8;
         (self & mask) >> s
     }
 
@@ -34,7 +34,7 @@ impl BitsExt for u16 {
 
     fn bits(&self, r: RangeInclusive<u8>) -> Self {
         let (s, e) = r.into_inner();
-        let mask = ((1_u32 << e + 1) - 1) as u16;
+        let mask = ((1_u32 << (e + 1)) - 1) as u16;
         (self & mask) >> s
     }
 
@@ -54,7 +54,7 @@ impl BitsExt for i16 {
 
     fn bits(&self, r: RangeInclusive<u8>) -> Self {
         let (s, e) = r.into_inner();
-        let mask = ((1_i32 << e + 1) - 1) as i16;
+        let mask = ((1_i32 << (e + 1)) - 1) as i16;
         (self & mask) >> s
     }
 

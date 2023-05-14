@@ -31,14 +31,14 @@ pub(crate) fn load_cartridge(rom: Vec<u8>, ram: Option<Vec<u8>>) -> Result<MmuSt
         None => Memory::with_size(ram_size),
     };
 
-    if usize::from(rom_size) != rom.len() {
+    if rom_size != rom.len() {
         bail!(
             "ROM size mismatch (expected {:#x}, got {:#x})",
             rom_size,
             rom.len()
         );
     }
-    if usize::from(ram_size) != ram.len() {
+    if ram_size != ram.len() {
         bail!(
             "RAM size mismatch (expected {:#x}, got {:#x})",
             ram_size,
