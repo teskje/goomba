@@ -1,0 +1,38 @@
+<html>
+<head>
+    <style>
+        html,
+        body {
+            overflow: hidden;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            display: grid;
+            grid-template-rows: 50px minmax(0, 1fr) 100px;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        #menu {
+        }
+
+        #lcd {
+        }
+
+        #joypad {
+        }
+    </style>
+</head>
+
+<body>
+    <div id="menu">
+        ROM: <input type="file" id="input-rom" />
+    </div>
+
+    <div id="lcd"></div>
+    <div id="joypad"></div>
+</body>
+</html>

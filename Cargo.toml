@@ -8,6 +8,7 @@ authors.workspace = true
 members = [
     "code",
     "emulator",
+    "web",
 ]
 
 [workspace.package]
@@ -17,16 +18,18 @@ authors = ["jteske@posteo.net"]
 [workspace.dependencies]
 anyhow = "1"
 log = "0.4"
+pixels = "0.11"
 serde = { version = "1", features = ["derive"] }
+winit = "0.28"
 
 [dependencies]
 anyhow.workspace = true
 log.workspace = true
+pixels.workspace = true
+winit.workspace = true
 argh = "0.1"
 env_logger = "0.10"
-pixels = "0.11"
 rfd = "0.11"
-winit = "0.28"
 winit_input_helper = "0.14"
 emulator = { path = "emulator" }
 
