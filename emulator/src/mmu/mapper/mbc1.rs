@@ -61,7 +61,7 @@ impl Mapper {
         }
     }
 
-    pub(super) fn store_ram<W: Write>(&self, mut w: W) -> Result<()> {
+    pub(super) fn dump_ram<W: Write>(&self, mut w: W) -> Result<()> {
         w.write_all(self.ram.as_slice())?;
         Ok(())
     }

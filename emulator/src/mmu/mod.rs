@@ -161,7 +161,7 @@ impl MmuState {
         }
     }
 
-    pub fn store_ram<W: Write>(&self, w: W) -> Result<()> {
-        self.mapper.store_ram(w)
+    pub fn dump_ram<W: Write>(&self, w: W) -> Result<()> {
+        self.mapper.dump_ram(w)
     }
 }

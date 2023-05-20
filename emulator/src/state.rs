@@ -64,10 +64,13 @@ impl State {
     pub fn store_ram(&self, path: &Path) -> Result<()> {
         let tmp_path = path.with_extension("ram.tmp");
         let mut file = File::create(&tmp_path).with_context(|| format!("creating {path:?}"))?;
-        self.mmu
-            .store_ram(&mut file)
+        self.dump_ram(&mut file)
             .with_context(|| format!("writing RAM to {path:?}"))?;
 
         fs::rename(&tmp_path, path).with_context(|| format!("renaming {tmp_path:?} to {path:?}"))
+    }
+
+    pub fn dump_ram<W: Write>(&self, w: W) -> Result<()> {
+        self.mmu.dump_ram(w)
     }
 }

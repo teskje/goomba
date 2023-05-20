@@ -72,4 +72,10 @@ impl Emulator {
             Err(e) => error!("cannot save RAM: {e:#}"),
         }
     }
+
+    pub fn dump_ram(&self) -> Result<Vec<u8>> {
+        let mut buf = Vec::new();
+        self.state.dump_ram(&mut buf)?;
+        Ok(buf)
+    }
 }

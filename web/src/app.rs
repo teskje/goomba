@@ -11,13 +11,7 @@ use winit::window::Window;
 pub struct App {
     window: Window,
     pixels: Pixels,
-    emulator: Option<Emulator>,
-    /// A queue containing received button events.
-    ///
-    /// We don't handle button events directly but defer them to ensure only a single button event
-    /// is handled during each frame. This ensures that the game sees all events, even if
-    /// successive once occur within the same frame.
-    button_events: VecDeque<ButtonEvent>,
+    game: Option<Game>,
 }
 
 impl App {
@@ -33,9 +27,14 @@ impl App {
         Self {
             window,
             pixels,
-            emulator: None,
-            button_events: Default::default(),
+            game: None,
         }
+    }
+
+    pub fn take_ram_save(&mut self) -> Option<RamSave> {
+        let Some(game) = &mut self.game else { return None };
+
+        game.ram_save.take()
     }
 
     pub fn handle_winit_event(&mut self, event: WinitEvent<()>) -> Result<()> {
@@ -50,8 +49,9 @@ impl App {
     pub fn handle_gui_event(&mut self, event: GuiEvent) -> Result<()> {
         use GuiEvent::*;
         match event {
-            Resized(size) => self.resize(size)?,
-            FileLoaded(data) => self.load_emulator(data)?,
+            Resize(size) => self.resize(size)?,
+            LoadGame { name, rom, ram } => self.load_game(name, rom, ram)?,
+            SaveRam => self.save_ram()?,
             Button(evt) => self.register_button_event(evt),
         }
 
@@ -59,14 +59,14 @@ impl App {
     }
 
     fn handle_button_event(&mut self) {
-        let Some(emu) = &mut self.emulator else { return };
-        let Some(event) = self.button_events.pop_front() else { return };
+        let Some(game) = &mut self.game else { return };
+        let Some(event) = game.button_events.pop_front() else { return };
 
         use ButtonEvent::*;
 
         match event {
-            Pressed(btn) => emu.press_button(btn),
-            Released(btn) => emu.release_button(btn),
+            Pressed(btn) => game.emulator.press_button(btn),
+            Released(btn) => game.emulator.release_button(btn),
         }
     }
 
@@ -79,21 +79,36 @@ impl App {
             .context("resize error")
     }
 
-    fn load_emulator(&mut self, data: Vec<u8>) -> Result<()> {
-        let emu = Emulator::load(data, None)?;
-        self.emulator = Some(emu);
+    fn load_game(&mut self, name: String, rom: Vec<u8>, ram: Option<Vec<u8>>) -> Result<()> {
+        let emulator = Emulator::load(rom, ram)?;
+        let game = Game {
+            name,
+            emulator,
+            ram_save: None,
+            button_events: Default::default(),
+        };
+        self.game = Some(game);
+        Ok(())
+    }
+
+    fn save_ram(&mut self) -> Result<()> {
+        let Some(game) = &mut self.game else { return Ok(()) };
+
+        let ram = game.emulator.dump_ram()?;
+        let name = format!("{}.gb-ram", game.name);
+        game.ram_save = Some(RamSave { name, ram });
         Ok(())
     }
 
     fn register_button_event(&mut self, event: ButtonEvent) {
-        if self.emulator.is_some() {
-            self.button_events.push_back(event);
-        }
+        let Some(game) = &mut self.game else { return };
+
+        game.button_events.push_back(event);
     }
 
     fn render_frame(&mut self) -> Result<()> {
-        let frame = match &mut self.emulator {
-            Some(emu) => emu.render_frame()?,
+        let frame = match &mut self.game {
+            Some(game) => game.emulator.render_frame()?,
             None => Frame::default(),
         };
 
@@ -105,10 +120,33 @@ impl App {
     }
 }
 
+struct Game {
+    name: String,
+    emulator: Emulator,
+    /// Holds the `RamSave` from the last save request.
+    ram_save: Option<RamSave>,
+    /// A queue containing received button events.
+    ///
+    /// We don't handle button events directly but defer them to ensure only a single button event
+    /// is handled during each frame. This ensures that the game sees all events, even if
+    /// successive once occur within the same frame.
+    button_events: VecDeque<ButtonEvent>,
+}
+
+pub struct RamSave {
+    pub name: String,
+    pub ram: Vec<u8>,
+}
+
 #[derive(Debug)]
 pub enum GuiEvent {
-    Resized(LogicalSize<u32>),
-    FileLoaded(Vec<u8>),
+    Resize(LogicalSize<u32>),
+    LoadGame {
+        name: String,
+        rom: Vec<u8>,
+        ram: Option<Vec<u8>>,
+    },
+    SaveRam,
     Button(ButtonEvent),
 }
 

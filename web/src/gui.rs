@@ -2,10 +2,14 @@ use std::sync::mpsc::{self, Sender, TryRecvError};
 
 use anyhow::bail;
 use emulator::Button;
-use js_sys::Uint8Array;
+use futures::future::OptionFuture;
+use js_sys::{Array, Uint8Array};
 use log::error;
 use wasm_bindgen::JsCast;
-use web_sys::FileReader;
+use web_sys::{
+    Blob, Element, Event, File, HtmlAnchorElement, HtmlDivElement, HtmlInputElement, KeyboardEvent,
+    PointerEvent, Url,
+};
 use winit::dpi::LogicalSize;
 use winit::event_loop::EventLoop;
 use winit::platform::web::{WindowBuilderExtWebSys, WindowExtWebSys};
@@ -37,12 +41,16 @@ pub async fn run() {
             Err(TryRecvError::Disconnected) => bail!("event_tx disconnected"),
         }
 
+        if let Some(save) = app.take_ram_save() {
+            save_file(&save.ram, &save.name);
+        }
+
         app.handle_winit_event(event)
     };
 
     event_loop.run(move |event, _, control_flow| {
         if let Err(error) = try_handle(event) {
-            error!("{error}");
+            error!("{error:#?}");
             control_flow.set_exit_with_code(1);
         } else {
             control_flow.set_poll();
@@ -51,7 +59,7 @@ pub async fn run() {
 }
 
 fn attach_canvas(window: &Window) {
-    let canvas = web_sys::Element::from(window.canvas());
+    let canvas = Element::from(window.canvas());
     lcd_element()
         .append_child(&canvas)
         .expect("error appending canvas");
@@ -75,9 +83,13 @@ fn register_event_listeners(event_tx: Sender<GuiEvent>) {
     });
 
     // menu buttons
-    web::add_event_listener(&rom_input_element(), "change", {
+    web::add_event_listener(&load_input_element(), "change", {
         let tx = event_tx.clone();
-        move |e| on_rom_input_change(e, tx.clone())
+        move |e| on_load_input_change(e, tx.clone())
+    });
+    web::add_event_listener(&save_button_element(), "click", {
+        let tx = event_tx.clone();
+        move |e| on_save_button_click(e, tx.clone())
     });
 
     // joypad buttons
@@ -101,71 +113,124 @@ fn register_event_listeners(event_tx: Sender<GuiEvent>) {
     }
 }
 
-fn on_window_resize(_e: web_sys::Event, tx: Sender<GuiEvent>) {
-    let event = GuiEvent::Resized(lcd_size());
+fn on_window_resize(_e: Event, tx: Sender<GuiEvent>) {
+    let event = GuiEvent::Resize(lcd_size());
     tx.send(event).unwrap();
 }
 
-fn on_key_press(e: web_sys::KeyboardEvent, tx: Sender<GuiEvent>) {
+fn on_key_press(e: KeyboardEvent, tx: Sender<GuiEvent>) {
     if let Some(event) = GuiEvent::for_key_press(&e.key()) {
         tx.send(event).unwrap();
     }
 }
 
-fn on_key_release(e: web_sys::KeyboardEvent, tx: Sender<GuiEvent>) {
+fn on_key_release(e: KeyboardEvent, tx: Sender<GuiEvent>) {
     if let Some(event) = GuiEvent::for_key_release(&e.key()) {
         tx.send(event).unwrap();
     }
 }
 
-fn on_button_press(e: web_sys::PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
+fn on_button_press(e: PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
     let target = e.target().unwrap();
-    let elem: &web_sys::Element = target.unchecked_ref();
+    let elem: &Element = target.unchecked_ref();
     elem.release_pointer_capture(e.pointer_id()).unwrap();
 
     let event = GuiEvent::button_pressed(btn);
     tx.send(event).unwrap();
 }
 
-fn on_button_release(_e: web_sys::PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
+fn on_button_release(_e: PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
     let event = GuiEvent::button_released(btn);
     tx.send(event).unwrap();
 }
 
-fn on_button_enter(e: web_sys::PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
+fn on_button_enter(e: PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
     if e.pointer_type() == "touch" {
         on_button_press(e, btn, tx);
     }
 }
 
-fn on_rom_input_change(_e: web_sys::Event, tx: Sender<GuiEvent>) {
-    let input = rom_input_element();
+fn on_load_input_change(_e: Event, tx: Sender<GuiEvent>) {
+    let input = load_input_element();
     let files = input.files().unwrap();
-    let Some(file) = files.item(0) else { return };
 
-    let reader = FileReader::new().unwrap();
-    reader.read_as_array_buffer(&file).unwrap();
+    let mut rom = None;
+    let mut ram = None;
+    let mut i = 0;
+    while let Some(file) = files.item(i) {
+        let name = file.name();
+        if name.ends_with(".gb") {
+            rom = Some(file);
+        } else if name.ends_with(".gb-ram") {
+            ram = Some(file);
+        }
+        i += 1;
+    }
 
-    let onload = web::js_function(move |event| {
-        let reader: FileReader = event.target().unwrap().unchecked_into();
-        let result = reader.result().unwrap();
-        let array = Uint8Array::new(&result);
-        let data = array.to_vec();
-        let event = GuiEvent::FileLoaded(data);
-        tx.send(event).unwrap();
-    });
-    reader.set_onload(Some(&onload));
+    if let Some(rom) = rom {
+        load_rom_and_ram(rom, ram, tx);
+    } else {
+        web::window().alert_with_message("No ROM provided").unwrap();
+    }
 }
 
-fn lcd_element() -> web_sys::HtmlDivElement {
+fn load_rom_and_ram(rom: File, ram: Option<File>, tx: Sender<GuiEvent>) {
+    let filename = rom.name();
+    let name = match filename.strip_suffix(".gb") {
+        Some(name) => name.into(),
+        None => filename,
+    };
+
+    let read_rom = read_file(rom);
+    let read_ram: OptionFuture<_> = ram.map(|f| read_file(f)).into();
+
+    wasm_bindgen_futures::spawn_local(async move {
+        let (rom, ram) = futures::join!(read_rom, read_ram);
+        let event = GuiEvent::LoadGame { name, rom, ram };
+        tx.send(event).unwrap();
+    });
+}
+
+async fn read_file(file: File) -> Vec<u8> {
+    let promise = file.array_buffer();
+    let fut = wasm_bindgen_futures::JsFuture::from(promise);
+    let result = fut.await.unwrap();
+
+    let array = Uint8Array::new(&result);
+    array.to_vec()
+}
+
+fn save_file(data: &[u8], name: &str) {
+    let array = Array::new();
+    array.push(&Uint8Array::from(data));
+    let blob = Blob::new_with_u8_array_sequence(&array).unwrap();
+    let url = Url::create_object_url_with_blob(&blob).unwrap();
+
+    let a = web::document().create_element("a").unwrap();
+    let a: HtmlAnchorElement = a.unchecked_into();
+    a.set_href(&url);
+    a.set_download(name);
+    a.click();
+}
+
+fn on_save_button_click(_e: Event, tx: Sender<GuiEvent>) {
+    let event = GuiEvent::SaveRam;
+    tx.send(event).unwrap();
+}
+
+fn lcd_element() -> HtmlDivElement {
     web::get_element_by_id("lcd").expect("lcd element missing")
 }
 
-fn rom_input_element() -> web_sys::HtmlInputElement {
+fn load_input_element() -> HtmlInputElement {
     web::get_element_by_id("input-load").expect("rom input missing")
 }
 
-fn button_elements() -> Vec<(Button, web_sys::Element)> {
+fn save_button_element() -> Element {
+    web::get_element_by_id("button-save").expect("save button missing")
+}
+
+fn button_elements() -> Vec<(Button, Element)> {
     let button_ids = [
         (Button::Up, "button-up"),
         (Button::Down, "button-down"),

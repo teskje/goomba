@@ -48,10 +48,10 @@ impl Mapper {
         }
     }
 
-    pub(super) fn store_ram<W: Write>(&self, w: W) -> Result<()> {
+    pub(super) fn dump_ram<W: Write>(&self, w: W) -> Result<()> {
         match self {
             Self::RomOnly(_) => Ok(()),
-            Self::Mbc1(m) => m.store_ram(w),
+            Self::Mbc1(m) => m.dump_ram(w),
         }
     }
 }

@@ -5,6 +5,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com"> 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> 
     <link href="https://fonts.googleapis.com/css2?family=Exo&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/17274452b8.js" crossorigin="anonymous"></script>
 
     <style>
         :root {
@@ -42,6 +43,9 @@
             background-color: var(--woodsmoke);
         }
         #menu .button {
+            margin-right: 10px;
+            margin-left: 10px;
+
             color: var(--fountain-blue);
             font-size: 1.1rem;
         }
@@ -94,7 +98,7 @@
             font-size: 12px;
         }
 
-        .button {
+        .button, .button * {
             cursor: pointer;
         }
     </style>
@@ -109,10 +113,15 @@
 
 <body>
     <div id="menu">
-        <label class="button">
-            Load
-            <input type="file" id="input-load" />
-        </label>
+        <span class="button" title="Load ROM + RAM">
+            <label for="input-load">
+                <i class="fa-solid fa-compact-disc"></i>
+            </label>
+            <input type="file" id="input-load" multiple />
+        </span>
+        <span id="button-save" class="button" title="Save RAM">
+            <i class="fa-solid fa-floppy-disk"></i>
+        </span>
     </div>
 
     <div id="grid">
