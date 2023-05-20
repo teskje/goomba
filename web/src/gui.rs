@@ -1,6 +1,7 @@
 use std::sync::mpsc::{self, Sender, TryRecvError};
 
 use anyhow::bail;
+use emulator::Button;
 use js_sys::Uint8Array;
 use log::error;
 use wasm_bindgen::JsCast;
@@ -60,48 +61,84 @@ fn register_event_listeners(event_tx: Sender<GuiEvent>) {
     // resizing
     web::add_event_listener(&web::window(), "resize", {
         let tx = event_tx.clone();
-        move |e| on_window_resized(e, tx.clone())
+        move |e| on_window_resize(e, tx.clone())
     });
 
     // key presses
     web::add_event_listener(&web::window(), "keydown", {
         let tx = event_tx.clone();
-        move |e| on_key_pressed(e, tx.clone())
+        move |e| on_key_press(e.unchecked_into(), tx.clone())
     });
     web::add_event_listener(&web::window(), "keyup", {
         let tx = event_tx.clone();
-        move |e| on_key_released(e, tx.clone())
+        move |e| on_key_release(e.unchecked_into(), tx.clone())
     });
 
     // menu buttons
     web::add_event_listener(&rom_input_element(), "change", {
         let tx = event_tx.clone();
-        move |e| on_rom_input_changed(e, tx.clone())
+        move |e| on_rom_input_change(e, tx.clone())
     });
+
+    // joypad buttons
+    for (btn, elem) in button_elements() {
+        web::add_event_listener(&elem, "pointerdown", {
+            let tx = event_tx.clone();
+            move |e| on_button_press(e.unchecked_into(), btn, tx.clone())
+        });
+        web::add_event_listener(&elem, "pointerup", {
+            let tx = event_tx.clone();
+            move |e| on_button_release(e.unchecked_into(), btn, tx.clone())
+        });
+        web::add_event_listener(&elem, "pointerenter", {
+            let tx = event_tx.clone();
+            move |e| on_button_enter(e.unchecked_into(), btn, tx.clone())
+        });
+        web::add_event_listener(&elem, "pointerleave", {
+            let tx = event_tx.clone();
+            move |e| on_button_release(e.unchecked_into(), btn, tx.clone())
+        });
+    }
 }
 
-fn on_window_resized(_e: web_sys::Event, tx: Sender<GuiEvent>) {
+fn on_window_resize(_e: web_sys::Event, tx: Sender<GuiEvent>) {
     let event = GuiEvent::Resized(lcd_size());
     tx.send(event).unwrap();
 }
 
-fn on_key_pressed(e: web_sys::Event, tx: Sender<GuiEvent>) {
-    let kbe = e.unchecked_ref::<web_sys::KeyboardEvent>();
-    let key = kbe.key();
-    if let Some(event) = GuiEvent::for_key_press(&key) {
+fn on_key_press(e: web_sys::KeyboardEvent, tx: Sender<GuiEvent>) {
+    if let Some(event) = GuiEvent::for_key_press(&e.key()) {
         tx.send(event).unwrap();
     }
 }
 
-fn on_key_released(e: web_sys::Event, tx: Sender<GuiEvent>) {
-    let kbe = e.unchecked_ref::<web_sys::KeyboardEvent>();
-    let key = kbe.key();
-    if let Some(event) = GuiEvent::for_key_release(&key) {
+fn on_key_release(e: web_sys::KeyboardEvent, tx: Sender<GuiEvent>) {
+    if let Some(event) = GuiEvent::for_key_release(&e.key()) {
         tx.send(event).unwrap();
     }
 }
 
-fn on_rom_input_changed(_e: web_sys::Event, tx: Sender<GuiEvent>) {
+fn on_button_press(e: web_sys::PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
+    let target = e.target().unwrap();
+    let elem: &web_sys::Element = target.unchecked_ref();
+    elem.release_pointer_capture(e.pointer_id()).unwrap();
+
+    let event = GuiEvent::button_pressed(btn);
+    tx.send(event).unwrap();
+}
+
+fn on_button_release(_e: web_sys::PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
+    let event = GuiEvent::button_released(btn);
+    tx.send(event).unwrap();
+}
+
+fn on_button_enter(e: web_sys::PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
+    if e.pointer_type() == "touch" {
+        on_button_press(e, btn, tx);
+    }
+}
+
+fn on_rom_input_change(_e: web_sys::Event, tx: Sender<GuiEvent>) {
     let input = rom_input_element();
     let files = input.files().unwrap();
     let Some(file) = files.item(0) else { return };
@@ -125,7 +162,28 @@ fn lcd_element() -> web_sys::HtmlDivElement {
 }
 
 fn rom_input_element() -> web_sys::HtmlInputElement {
-    web::get_element_by_id("input-rom").expect("rom input missing")
+    web::get_element_by_id("input-load").expect("rom input missing")
+}
+
+fn button_elements() -> Vec<(Button, web_sys::Element)> {
+    let button_ids = [
+        (Button::Up, "button-up"),
+        (Button::Down, "button-down"),
+        (Button::Left, "button-left"),
+        (Button::Right, "button-right"),
+        (Button::A, "button-a"),
+        (Button::B, "button-b"),
+        (Button::Start, "button-start"),
+        (Button::Select, "button-select"),
+    ];
+
+    button_ids
+        .into_iter()
+        .map(|(btn, id)| {
+            let elem = web::get_element_by_id(id).expect("button elementt missing");
+            (btn, elem)
+        })
+        .collect()
 }
 
 fn lcd_size() -> LogicalSize<u32> {

@@ -1,6 +1,9 @@
+use std::collections::VecDeque;
+
 use anyhow::{Context, Result};
 use emulator::{Button, Emulator, Frame};
-use pixels::{Pixels, SurfaceTexture};
+use pixels::wgpu::Color;
+use pixels::{Pixels, PixelsBuilder, SurfaceTexture};
 use winit::dpi::LogicalSize;
 use winit::event::Event as WinitEvent;
 use winit::window::Window;
@@ -9,13 +12,21 @@ pub struct App {
     window: Window,
     pixels: Pixels,
     emulator: Option<Emulator>,
+    /// A queue containing received button events.
+    ///
+    /// We don't handle button events directly but defer them to ensure only a single button event
+    /// is handled during each frame. This ensures that the game sees all events, even if
+    /// successive once occur within the same frame.
+    button_events: VecDeque<ButtonEvent>,
 }
 
 impl App {
     pub async fn create(window: Window) -> Self {
         let size = window.inner_size();
         let surface = SurfaceTexture::new(size.width, size.height, &window);
-        let pixels = Pixels::new_async(Frame::WIDTH, Frame::HEIGHT, surface)
+        let pixels = PixelsBuilder::new(Frame::WIDTH, Frame::HEIGHT, surface)
+            .clear_color(Color::TRANSPARENT)
+            .build_async()
             .await
             .expect("error creating Pixels");
 
@@ -23,11 +34,13 @@ impl App {
             window,
             pixels,
             emulator: None,
+            button_events: Default::default(),
         }
     }
 
     pub fn handle_winit_event(&mut self, event: WinitEvent<()>) -> Result<()> {
         if event == WinitEvent::MainEventsCleared {
+            self.handle_button_event();
             self.render_frame()?;
         }
 
@@ -39,11 +52,22 @@ impl App {
         match event {
             Resized(size) => self.resize(size)?,
             FileLoaded(data) => self.load_emulator(data)?,
-            ButtonPressed(button) => self.press_button(button),
-            ButtonReleased(button) => self.release_button(button),
+            Button(evt) => self.register_button_event(evt),
         }
 
         Ok(())
+    }
+
+    fn handle_button_event(&mut self) {
+        let Some(emu) = &mut self.emulator else { return };
+        let Some(event) = self.button_events.pop_front() else { return };
+
+        use ButtonEvent::*;
+
+        match event {
+            Pressed(btn) => emu.press_button(btn),
+            Released(btn) => emu.release_button(btn),
+        }
     }
 
     fn resize(&mut self, size: LogicalSize<u32>) -> Result<()> {
@@ -61,6 +85,12 @@ impl App {
         Ok(())
     }
 
+    fn register_button_event(&mut self, event: ButtonEvent) {
+        if self.emulator.is_some() {
+            self.button_events.push_back(event);
+        }
+    }
+
     fn render_frame(&mut self) -> Result<()> {
         let frame = match &mut self.emulator {
             Some(emu) => emu.render_frame()?,
@@ -73,34 +103,36 @@ impl App {
 
         self.pixels.render().context("render error")
     }
-
-    fn press_button(&mut self, button: Button) {
-        if let Some(emu) = &mut self.emulator {
-            emu.press_button(button);
-        }
-    }
-
-    fn release_button(&mut self, button: Button) {
-        if let Some(emu) = &mut self.emulator {
-            emu.release_button(button);
-        }
-    }
 }
 
+#[derive(Debug)]
 pub enum GuiEvent {
     Resized(LogicalSize<u32>),
     FileLoaded(Vec<u8>),
-    ButtonPressed(Button),
-    ButtonReleased(Button),
+    Button(ButtonEvent),
+}
+
+#[derive(Debug)]
+pub enum ButtonEvent {
+    Pressed(Button),
+    Released(Button),
 }
 
 impl GuiEvent {
+    pub fn button_pressed(btn: Button) -> Self {
+        Self::Button(ButtonEvent::Pressed(btn))
+    }
+
+    pub fn button_released(btn: Button) -> Self {
+        Self::Button(ButtonEvent::Released(btn))
+    }
+
     pub fn for_key_press(key: &str) -> Option<Self> {
-        key_to_button(key).map(Self::ButtonPressed)
+        key_to_button(key).map(Self::button_pressed)
     }
 
     pub fn for_key_release(key: &str) -> Option<Self> {
-        key_to_button(key).map(Self::ButtonReleased)
+        key_to_button(key).map(Self::button_released)
     }
 }
 

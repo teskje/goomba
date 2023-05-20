@@ -1,38 +1,166 @@
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com"> 
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> 
+    <link href="https://fonts.googleapis.com/css2?family=Exo&display=swap" rel="stylesheet">
+
     <style>
+        :root {
+            --bunker: #0D1117;
+            --woodsmoke: #181A1F;
+            --shark: #21252B;
+            --shuttle-gray: #5F6672;
+            --cadet-blue: #A9B2C3;
+            --ghost: #C6CCD7;
+            --fountain-blue: #56B6C2;
+            --lavender: #B57EDC;
+        }
+
         html,
         body {
             overflow: hidden;
             margin: 0 !important;
             padding: 0 !important;
+
             height: 100%;
             width: 100%;
-        }
 
-        body {
-            display: grid;
-            grid-template-rows: 50px minmax(0, 1fr) 100px;
-            grid-template-columns: minmax(0, 1fr);
+            background-color: var(--shark);
+
+            color: var(--cadet-blue);
+            font-family: 'Exo', sans-serif;
+
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         #menu {
+            padding: 10px;
+            background-color: var(--woodsmoke);
+        }
+        #menu .button {
+            color: var(--fountain-blue);
+            font-size: 1.1rem;
         }
 
-        #lcd {
+        #input-load {
+            display: none;
         }
 
-        #joypad {
+        #grid {
+            height: 100%;
+
+            display: grid;
+            grid-template-rows: minmax(0, 1fr) 300px;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        #joypad > svg {
+            display: block;
+            margin: auto;
+
+            stroke: var(--bunker);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        #direction-buttons {
+            fill: var(--shuttle-gray);
+        }
+
+        #ab-buttons {
+            fill: var(--lavender);
+        }
+        #ab-buttons text {
+            fill: var(--bunker);
+            stroke-width: 0;
+            opacity: 0.7;
+
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        #s-buttons {
+            fill: var(--ghost);
+        }
+        #s-buttons text {
+            fill: var(--cadet-blue);
+            stroke-width: 0;
+
+            font-size: 12px;
+        }
+
+        .button {
+            cursor: pointer;
         }
     </style>
+
+    <script>
+        // Prevent double-tap zoom in Safari on iOS.
+        // One would hope that either `user-scalable=no` or `touch-action: none`
+        // would be sufficient, but that's apparently not the case.
+        document.addEventListener("dblclick", (e) => e.preventDefault());
+    </script>
 </head>
 
 <body>
     <div id="menu">
-        ROM: <input type="file" id="input-rom" />
+        <label class="button">
+            Load
+            <input type="file" id="input-load" />
+        </label>
     </div>
 
-    <div id="lcd"></div>
-    <div id="joypad"></div>
+    <div id="grid">
+        <div id="lcd"></div>
+        <div id="joypad">
+            <svg width="350" height="250">
+                <g id="direction-buttons" transform="translate(2 10)">
+                    <polygon
+                        id="button-up" class="button"
+                        points="50,0 50,50 75,75 100,50 100,0"
+                    />
+                    <polygon
+                        id="button-down" class="button"
+                        points="50,150 50,100 75,75 100,100 100,150"
+                    />
+                    <polygon
+                        id="button-left" class="button"
+                        points="0,50 50,50 75,75 50,100 0,100"
+                    />
+                    <polygon
+                        id="button-right" class="button"
+                        points="150,100 100,100 75,75 100,50 150,50"
+                    />
+                </g>
+
+                <g id="ab-buttons" transform="translate(250 75)">
+                    <g id="button-a" class="button" transform="translate(65 0)">
+                        <circle r="30" />
+                        <text text-anchor="middle" dominant-baseline="central">A</text>
+                    </g>
+                    <g id="button-b" class="button" transform="translate(0 20)">
+                        <circle r="30" />
+                        <text text-anchor="middle" dominant-baseline="central">B</text>
+                    </g>
+                </g>
+
+                <g id="s-buttons" transform="translate(120 200)">
+                    <g id="button-select" class="button" transform="rotate(-20)">
+                        <rect x="0" y="0" width="60" height="15" ry="15" rx="5" />
+                        <text x="13" y="28">select</text>
+                    </g>
+                    <g id="button-start" class="button" transform="translate(70 0) rotate(-20)">
+                        <rect x="0" y="0" width="60" height="15" ry="15" rx="5" />
+                        <text x="17" y="28">start</text>
+                    </g>
+                </g>
+            </svg>
+        </div>
+    </div>
 </body>
 </html>
