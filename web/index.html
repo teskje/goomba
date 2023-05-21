@@ -17,6 +17,7 @@
             --ghost: #C6CCD7;
             --fountain-blue: #56B6C2;
             --lavender: #B57EDC;
+            --sunglo: #E06C75;
         }
 
         html,
@@ -47,7 +48,10 @@
             margin-left: 10px;
 
             color: var(--fountain-blue);
-            font-size: 1.1rem;
+            font-size: 1.2rem;
+        }
+        #button-fullscreen-off {
+            display: none;
         }
 
         #input-load {
@@ -108,6 +112,28 @@
         // One would hope that either `user-scalable=no` or `touch-action: none`
         // would be sufficient, but that's apparently not the case.
         document.addEventListener("dblclick", (e) => e.preventDefault());
+
+        document.addEventListener("DOMContentLoaded", () => {
+            init_fullscreen_controls();
+        });
+
+        function init_fullscreen_controls() {
+            const btn_on = document.getElementById("button-fullscreen-on");
+            const btn_off = document.getElementById("button-fullscreen-off");
+
+            btn_on.addEventListener("click", () => document.body.requestFullscreen());
+            btn_off.addEventListener("click", () => document.exitFullscreen());
+
+            document.addEventListener("fullscreenchange", () => {
+                if (document.fullscreenElement) {
+                    btn_on.style.display = "none";
+                    btn_off.style.display = "inline";
+                } else {
+                    btn_on.style.display = "inline";
+                    btn_off.style.display = "none";
+                }
+            });
+        }
     </script>
 </head>
 
@@ -121,6 +147,12 @@
         </span>
         <span id="button-save" class="button" title="Save RAM">
             <i class="fa-solid fa-floppy-disk"></i>
+        </span>
+        <span id="button-fullscreen-on" class="button" title="Enter Fullscreen">
+            <i class="fa-solid fa-expand"></i>
+        </span>
+        <span id="button-fullscreen-off" class="button" title="Exit Fullscreen">
+            <i class="fa-solid fa-compress"></i>
         </span>
     </div>
 

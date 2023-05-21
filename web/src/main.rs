@@ -9,4 +9,3 @@ fn main() {
 
     wasm_bindgen_futures::spawn_local(gui::run());
 }
-

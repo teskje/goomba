@@ -7,8 +7,8 @@ use js_sys::{Array, Uint8Array};
 use log::error;
 use wasm_bindgen::JsCast;
 use web_sys::{
-    Blob, Element, Event, File, HtmlAnchorElement, HtmlDivElement, HtmlInputElement, KeyboardEvent,
-    PointerEvent, Url,
+    Blob, Element, Event, File, HtmlAnchorElement, HtmlInputElement, KeyboardEvent, PointerEvent,
+    Url,
 };
 use winit::dpi::LogicalSize;
 use winit::event_loop::EventLoop;
@@ -60,7 +60,7 @@ pub async fn run() {
 
 fn attach_canvas(window: &Window) {
     let canvas = Element::from(window.canvas());
-    lcd_element()
+    get_lcd()
         .append_child(&canvas)
         .expect("error appending canvas");
 }
@@ -83,24 +83,24 @@ fn register_event_listeners(event_tx: Sender<GuiEvent>) {
     });
 
     // menu buttons
-    web::add_event_listener(&load_input_element(), "change", {
+    web::add_event_listener(&get_load_input(), "change", {
         let tx = event_tx.clone();
         move |e| on_load_input_change(e, tx.clone())
     });
-    web::add_event_listener(&save_button_element(), "click", {
+    web::add_event_listener(&get_save_button(), "click", {
         let tx = event_tx.clone();
         move |e| on_save_button_click(e, tx.clone())
     });
 
     // joypad buttons
-    for (btn, elem) in button_elements() {
+    for (btn, elem) in get_joypad_buttons() {
         web::add_event_listener(&elem, "pointerdown", {
             let tx = event_tx.clone();
-            move |e| on_button_press(e.unchecked_into(), btn, tx.clone())
+            move |e| on_joypad_button_press(e.unchecked_into(), btn, tx.clone())
         });
         web::add_event_listener(&elem, "pointerup", {
             let tx = event_tx.clone();
-            move |e| on_button_release(e.unchecked_into(), btn, tx.clone())
+            move |e| on_joypad_button_release(e.unchecked_into(), btn, tx.clone())
         });
         web::add_event_listener(&elem, "pointerenter", {
             let tx = event_tx.clone();
@@ -108,7 +108,7 @@ fn register_event_listeners(event_tx: Sender<GuiEvent>) {
         });
         web::add_event_listener(&elem, "pointerleave", {
             let tx = event_tx.clone();
-            move |e| on_button_release(e.unchecked_into(), btn, tx.clone())
+            move |e| on_joypad_button_release(e.unchecked_into(), btn, tx.clone())
         });
     }
 }
@@ -130,7 +130,7 @@ fn on_key_release(e: KeyboardEvent, tx: Sender<GuiEvent>) {
     }
 }
 
-fn on_button_press(e: PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
+fn on_joypad_button_press(e: PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
     let target = e.target().unwrap();
     let elem: &Element = target.unchecked_ref();
     elem.release_pointer_capture(e.pointer_id()).unwrap();
@@ -139,19 +139,19 @@ fn on_button_press(e: PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
     tx.send(event).unwrap();
 }
 
-fn on_button_release(_e: PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
+fn on_joypad_button_release(_e: PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
     let event = GuiEvent::button_released(btn);
     tx.send(event).unwrap();
 }
 
 fn on_button_enter(e: PointerEvent, btn: Button, tx: Sender<GuiEvent>) {
     if e.pointer_type() == "touch" {
-        on_button_press(e, btn, tx);
+        on_joypad_button_press(e, btn, tx);
     }
 }
 
 fn on_load_input_change(_e: Event, tx: Sender<GuiEvent>) {
-    let input = load_input_element();
+    let input = get_load_input();
     let files = input.files().unwrap();
 
     let mut rom = None;
@@ -218,19 +218,19 @@ fn on_save_button_click(_e: Event, tx: Sender<GuiEvent>) {
     tx.send(event).unwrap();
 }
 
-fn lcd_element() -> HtmlDivElement {
-    web::get_element_by_id("lcd").expect("lcd element missing")
+fn get_lcd() -> Element {
+    web::get_element_by_id("lcd")
 }
 
-fn load_input_element() -> HtmlInputElement {
-    web::get_element_by_id("input-load").expect("rom input missing")
+fn get_load_input() -> HtmlInputElement {
+    web::get_element_by_id("input-load")
 }
 
-fn save_button_element() -> Element {
-    web::get_element_by_id("button-save").expect("save button missing")
+fn get_save_button() -> Element {
+    web::get_element_by_id("button-save")
 }
 
-fn button_elements() -> Vec<(Button, Element)> {
+fn get_joypad_buttons() -> Vec<(Button, Element)> {
     let button_ids = [
         (Button::Up, "button-up"),
         (Button::Down, "button-down"),
@@ -244,15 +244,12 @@ fn button_elements() -> Vec<(Button, Element)> {
 
     button_ids
         .into_iter()
-        .map(|(btn, id)| {
-            let elem = web::get_element_by_id(id).expect("button elementt missing");
-            (btn, elem)
-        })
+        .map(|(btn, id)| (btn, web::get_element_by_id(id)))
         .collect()
 }
 
 fn lcd_size() -> LogicalSize<u32> {
-    let lcd = lcd_element();
+    let lcd = get_lcd();
     LogicalSize {
         width: lcd.client_width() as u32,
         height: lcd.client_height() as u32,
