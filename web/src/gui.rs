@@ -182,7 +182,7 @@ fn load_rom_and_ram(rom: File, ram: Option<File>, tx: Sender<GuiEvent>) {
     };
 
     let read_rom = read_file(rom);
-    let read_ram: OptionFuture<_> = ram.map(|f| read_file(f)).into();
+    let read_ram: OptionFuture<_> = ram.map(read_file).into();
 
     wasm_bindgen_futures::spawn_local(async move {
         let (rom, ram) = futures::join!(read_rom, read_ram);

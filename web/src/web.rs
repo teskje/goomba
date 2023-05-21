@@ -14,7 +14,7 @@ pub fn get_element_by_id<E: JsCast>(id: &str) -> E {
     document()
         .get_element_by_id(id)
         .and_then(|e| e.dyn_into().ok())
-        .expect(&format!("element missing: #{id}"))
+        .unwrap_or_else(|| panic!("element missing: #{id}"))
 }
 
 pub fn js_function<F>(f: F) -> js_sys::Function
