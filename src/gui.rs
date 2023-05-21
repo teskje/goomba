@@ -14,7 +14,9 @@ const CODE_ERROR: i32 = 1;
 
 pub fn run(emu: Emulator) -> Result<()> {
     let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().build(&event_loop)?;
+    let window = WindowBuilder::new()
+        .with_title("Goomba")
+        .build(&event_loop)?;
     let size = window.inner_size();
     let surface = SurfaceTexture::new(size.width, size.height, &window);
     let pixels = Pixels::new(Frame::WIDTH, Frame::HEIGHT, surface)?;
