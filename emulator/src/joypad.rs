@@ -32,13 +32,13 @@ impl JoypadState {
     pub fn read_p1(&self) -> u8 {
         let mut value = 0x00;
         if self.select.direction {
-            value |= u8::from(self.buttons.right) << 0;
+            value |= u8::from(self.buttons.right);
             value |= u8::from(self.buttons.left) << 1;
             value |= u8::from(self.buttons.up) << 2;
             value |= u8::from(self.buttons.down) << 3;
         }
         if self.select.action {
-            value |= u8::from(self.buttons.a) << 0;
+            value |= u8::from(self.buttons.a);
             value |= u8::from(self.buttons.b) << 1;
             value |= u8::from(self.buttons.select) << 2;
             value |= u8::from(self.buttons.start) << 3;
